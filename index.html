@@ -105,14 +105,27 @@
         .feedback-box {
             background: #2c3e50; padding: 30px; border-radius: 16px; max-width: 500px; width: 100%;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            max-height: 90vh; /* Prevent it from growing taller than the screen */
+            display: flex; flex-direction: column;
         }
 
         .feedback-title { font-size: 2.5rem; margin: 0 0 10px 0; }
         .feedback-text { font-size: 1.1rem; line-height: 1.5; color: #bdc3c7; margin-bottom: 20px; }
-        .feedback-points { font-size: 1.5rem; font-weight: bold; color: #ffdd59; margin-bottom: 20px; }
+        .feedback-points { font-size: 1.5rem; font-weight: bold; margin-bottom: 20px; display: flex; flex-direction: column; align-items: center;}
 
-        .btn-next { background: #05c46b; box-shadow: 0 4px 0 #009432; color: white; font-size: 1.2rem; padding: 12px 30px; border: none; border-radius: 8px; cursor: pointer; width: 100%; }
+        .btn-next { background: #05c46b; box-shadow: 0 4px 0 #009432; color: white; font-size: 1.2rem; padding: 12px; border: none; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 10px;}
         .btn-next:hover { background: #10ac84; }
+
+        /* Time & End Game Adjustment in Feedback */
+        .feedback-buttons { display: flex; flex-direction: column; width: 100%; }
+        .feedback-top-row { display: flex; gap: 10px; width: 100%; }
+        .end-screen-buttons { display: flex; gap: 10px; width: 100%; margin-top: 15px; }
+        
+        .btn-adjust-time { background: #485460; box-shadow: 0 4px 0 #3d3d3d; color: white; font-size: 1rem; padding: 12px; border: none; border-radius: 8px; cursor: pointer; flex: 1; }
+        .btn-adjust-time:hover { background: #596275; }
+
+        .btn-end-popup { background: #e74c3c; box-shadow: 0 4px 0 #c0392b; color: white; font-size: 1rem; padding: 12px; border: none; border-radius: 8px; cursor: pointer; flex: 1; }
+        .btn-end-popup:hover { background: #c0392b; }
 
         /* Start Screen specific */
         .slider-container { margin: 25px 0; text-align: left; }
@@ -127,9 +140,39 @@
         }
 
         /* End Screen specific */
-        .final-score { font-size: 4rem; color: #0fb9b1; margin: 10px 0; }
-        .rank-text { font-size: 1.5rem; color: #ffdd59; margin-bottom: 10px; }
-        .high-score-notice { color: #f39c12; font-weight: bold; margin-bottom: 20px; display: none; animation: pulse 1s infinite alternate;}
+        .final-score { font-size: 3.5rem; color: #0fb9b1; margin: 10px 0; }
+        .rank-text { font-size: 1.2rem; color: #ffdd59; margin-bottom: 15px; }
+        .high-score-notice { color: #f39c12; font-weight: bold; margin-bottom: 10px; display: none; animation: pulse 1s infinite alternate;}
+        
+        /* Match History Review Container */
+        .review-container {
+            flex-grow: 1;
+            max-height: 250px;
+            overflow-y: auto;
+            background: #1e272e;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            text-align: left;
+            border: 1px solid #485460;
+        }
+        
+        /* Scrollbar styling for webkit */
+        .review-container::-webkit-scrollbar { width: 8px; }
+        .review-container::-webkit-scrollbar-track { background: #2c3e50; border-radius: 4px;}
+        .review-container::-webkit-scrollbar-thumb { background: #808e9b; border-radius: 4px; }
+        
+        .review-item {
+            font-size: 0.95rem;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #34495e;
+            line-height: 1.4;
+        }
+        .review-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .review-text { color: #d2dae2; margin-bottom: 5px; }
+        .review-status.correct { color: #05c46b; font-weight: bold; }
+        .review-status.incorrect { color: #ff7979; font-weight: bold; }
 
         @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.05); } }
 
@@ -161,7 +204,7 @@
     </div>
 
     <div class="overlay-screen" id="start-screen">
-        <div class="feedback-box">
+        <div class="feedback-box" style="justify-content: center;">
             <h2 class="feedback-title" style="color: #ffdd59;">Ready to Research?</h2>
             <p class="feedback-text">Test your ability to quickly identify Type I and Type II errors across medicine, law, tech, and everyday life.</p>
             
@@ -175,14 +218,30 @@
     </div>
 
     <div class="overlay-screen" id="feedback" style="display: none;">
-        <div class="feedback-box">
+        <div class="feedback-box" style="justify-content: center;">
             <h2 class="feedback-title" id="feedback-title">Correct!</h2>
             <div class="hint-box">
                 <strong>Null Hypothesis (H0):</strong> <span id="feedback-h0"></span>
             </div>
-            <p class="feedback-text" id="feedback-explanation">Explanation goes here.</p>
-            <div class="feedback-points" id="feedback-points">+150 pts</div>
-            <button class="btn-next" onclick="nextCard()">Next Scenario ➔</button>
+            <p class="feedback-text" id="feedback-explanation" style="flex-grow: 1; overflow-y: auto;">Explanation goes here.</p>
+            
+            <div class="feedback-points">
+                <span id="pts-total">+150 pts</span>
+                <span id="pts-breakdown" style="font-size: 0.9rem; color: #bdc3c7; font-weight: normal; margin-top: 5px;"></span>
+            </div>
+            
+            <div id="feedback-time-container" class="slider-container" style="display: none; margin-bottom: 25px;">
+                <label for="feedback-time-slider">Update Time Limit: <span class="val-display" id="feedback-time-val">15</span>s</label>
+                <input type="range" id="feedback-time-slider" min="5" max="60" step="1" oninput="updateMidGameTime(this.value)">
+            </div>
+
+            <div class="feedback-buttons">
+                <div class="feedback-top-row">
+                    <button class="btn-adjust-time" onclick="toggleTimeAdjustment()">⚙️ Adjust Time</button>
+                    <button class="btn-end-popup" onclick="forfeitGame()">🛑 End Game</button>
+                </div>
+                <button class="btn-next" onclick="nextCard()">Next Scenario ➔</button>
+            </div>
         </div>
     </div>
 
@@ -192,12 +251,320 @@
             <div class="final-score" id="final-score">0</div>
             <div class="high-score-notice" id="high-score-notice">🌟 NEW HIGH SCORE! 🌟</div>
             <div class="rank-text" id="rank-text">Novice Analyst</div>
-            <button class="btn-next" onclick="showStartScreen()">Play Again</button>
+            
+            <div class="review-container" id="review-container">
+                </div>
+
+            <div class="end-screen-buttons">
+                <button class="btn-end-popup" onclick="document.getElementById('end-screen').style.display='none'">🛑 Close</button>
+                <button class="btn-next" style="margin-top: 0; flex: 2;" onclick="showStartScreen()">Play Again</button>
+            </div>
         </div>
     </div>
 
 <script>
     const allScenarios = [
+        // NEW SCENARIOS
+      {
+        "text": "A teacher accuses a student of using AI to write an essay, but the student wrote it entirely themselves.",
+        "h0": "The student's work is original.",
+        "type": "type1",
+        "explanation": "False Positive. The teacher falsely rejected the null hypothesis (original work) and accused an honest student."
+      },
+      {
+        "text": "A student submits a 100% ChatGPT-generated essay, and the teacher gives it an A for brilliant original thought.",
+        "h0": "The student's work is original.",
+        "type": "type2",
+        "explanation": "False Negative. The teacher failed to reject the null hypothesis despite the work being entirely plagiarized."
+      },
+      {
+        "text": "A fire drill is triggered by a faulty sensor in the chemistry lab.",
+        "h0": "There is no fire.",
+        "type": "type1",
+        "explanation": "False Positive. The alarm reacted to a non-existent threat."
+      },
+      {
+        "text": "A small chemical fire starts in the lab, but the alarms fail to activate.",
+        "h0": "There is no fire.",
+        "type": "type2",
+        "explanation": "False Negative. The alarm failed to detect an actual emergency."
+      },
+      {
+        "text": "A water quality test flags a clean river as highly toxic, causing unnecessary panic.",
+        "h0": "The water is safe.",
+        "type": "type1",
+        "explanation": "False Positive. The test falsely rejected the true null hypothesis that the water was safe."
+      },
+      {
+        "text": "A factory pumps heavy metals into a river, but the environmental test shows the water is perfectly fine.",
+        "h0": "The water is safe.",
+        "type": "type2",
+        "explanation": "False Negative. The test failed to detect the severe pollution."
+      },
+      {
+        "text": "Astronomers announce they found an alien megastructure, but it was just dust on the telescope lens.",
+        "h0": "The anomaly is a natural/normal phenomenon.",
+        "type": "type1",
+        "explanation": "False Positive. They mistook a normal artifact for a groundbreaking discovery."
+      },
+      {
+        "text": "Astronomers ignore a strange signal, assuming it's background radiation, but it was actually an alien transmission.",
+        "h0": "The signal is just background noise.",
+        "type": "type2",
+        "explanation": "False Negative. They failed to recognize a true anomaly."
+      },
+      {
+        "text": "A seismograph triggers a tsunami warning after a heavy truck drives by the sensor.",
+        "h0": "There is no seismic activity.",
+        "type": "type1",
+        "explanation": "False Positive. The sensor mistook local vibrations for a major earthquake."
+      },
+      {
+        "text": "An underwater earthquake occurs, but the tsunami warning center dismisses the data as a sensor glitch.",
+        "h0": "There is no seismic activity.",
+        "type": "type2",
+        "explanation": "False Negative. They failed to act on real seismic data."
+      },
+      {
+        "text": "A botanist concludes a new fertilizer doubles plant growth, but the greenhouse was just unusually sunny that month.",
+        "h0": "The fertilizer has no effect.",
+        "type": "type1",
+        "explanation": "False Positive. The researcher attributed natural variance to their treatment."
+      },
+      {
+        "text": "A researcher abandons a revolutionary drought-resistant crop because the trial plants were accidentally overwatered.",
+        "h0": "The genetic modification has no effect.",
+        "type": "type2",
+        "explanation": "False Negative. A true effect was masked by a flaw in the experiment."
+      },
+      {
+        "text": "A smart doorbell alerts you that a 'person' is at the door, but it's just a moth flying near the lens.",
+        "h0": "There is no person at the door.",
+        "type": "type1",
+        "explanation": "False Positive. The AI incorrectly identified an insect as a human threat."
+      },
+      {
+        "text": "A burglar steals a package from the porch, and the smart doorbell doesn't record anything.",
+        "h0": "There is no person at the door.",
+        "type": "type2",
+        "explanation": "False Negative. The AI failed to detect the actual intruder."
+      },
+      {
+        "text": "A self-driving car slams its brakes on the highway because it thinks a floating plastic bag is a pedestrian.",
+        "h0": "The road ahead is clear.",
+        "type": "type1",
+        "explanation": "False Positive. The car reacted to a harmless object as if it were an obstacle."
+      },
+      {
+        "text": "A self-driving car rear-ends a stopped white truck because it thought the trailer was just the sky.",
+        "h0": "The road ahead is clear.",
+        "type": "type2",
+        "explanation": "False Negative. The car failed to reject the null hypothesis and crashed."
+      },
+      {
+        "text": "Your smartwatch tells you to go to the ER for a heart attack, but you were just playing a scary video game.",
+        "h0": "Your heart is functioning normally.",
+        "type": "type1",
+        "explanation": "False Positive. The watch mistook adrenaline for a cardiac event."
+      },
+      {
+        "text": "A patient suffers a mild cardiac event in their sleep, but their smartwatch records it as normal REM sleep.",
+        "h0": "Your heart is functioning normally.",
+        "type": "type2",
+        "explanation": "False Negative. The device missed the actual medical event."
+      },
+      {
+        "text": "A facial recognition system at the airport flags an innocent traveler as an international fugitive.",
+        "h0": "The traveler is innocent/not on the watchlist.",
+        "type": "type1",
+        "explanation": "False Positive. The system wrongly matched an innocent person to a criminal database."
+      },
+      {
+        "text": "A wanted fugitive walks right through passport control because the facial recognition system didn't recognize them with glasses.",
+        "h0": "The traveler is innocent/not on the watchlist.",
+        "type": "type2",
+        "explanation": "False Negative. The system failed to identify a real threat."
+      },
+      {
+        "text": "An online purchase of concert tickets is blocked by your credit card for suspected fraud.",
+        "h0": "The transaction is legitimate.",
+        "type": "type1",
+        "explanation": "False Positive. The bank blocked a valid purchase."
+      },
+      {
+        "text": "A scammer drains your bank account from another country, and the bank approves every transaction without blinking.",
+        "h0": "The transaction is legitimate.",
+        "type": "type2",
+        "explanation": "False Negative. The bank failed to detect the fraudulent activity."
+      },
+      {
+        "text": "An algorithm predicts a stock will crash, causing a massive sell-off, but the company's earnings were actually stellar.",
+        "h0": "The stock will remain stable.",
+        "type": "type1",
+        "explanation": "False Positive. A false alarm caused unnecessary panic in the market."
+      },
+      {
+        "text": "Investors keep pouring money into a startup, ignoring red flags, right before it goes completely bankrupt.",
+        "h0": "The company is financially healthy.",
+        "type": "type2",
+        "explanation": "False Negative. They failed to see the signs of actual financial ruin."
+      },
+      {
+        "text": "A vending machine repeatedly spits out a perfectly crisp, valid one-dollar bill.",
+        "h0": "The currency is valid.",
+        "type": "type1",
+        "explanation": "False Positive (Rejection). The machine falsely rejected good money."
+      },
+      {
+        "text": "A vending machine accepts a piece of monopoly money and dispenses a soda.",
+        "h0": "The currency is valid.",
+        "type": "type2",
+        "explanation": "False Negative (Acceptance). The machine failed to detect the fake currency."
+      },
+      {
+        "text": "A factory quality scanner trashes a batch of perfect microchips because of a speck of dust on the camera lens.",
+        "h0": "The microchips are functional.",
+        "type": "type1",
+        "explanation": "False Positive. Good products were flagged as defective."
+      },
+      {
+        "text": "A factory ships out a batch of exploding laptop batteries because the safety scanner was accidentally turned off.",
+        "h0": "The batteries are safe.",
+        "type": "type2",
+        "explanation": "False Negative. Defective products were shipped as if they were safe."
+      },
+      {
+        "text": "A parachute inspector fails a perfectly packed parachute because a single stitch looked slightly crooked.",
+        "h0": "The parachute is safe to use.",
+        "type": "type1",
+        "explanation": "False Positive. A safe item was rejected."
+      },
+      {
+        "text": "A skydiver jumps with a parachute that has a massive tear in the canopy because the inspector was distracted.",
+        "h0": "The parachute is safe to use.",
+        "type": "type2",
+        "explanation": "False Negative. A fatal flaw was missed."
+      },
+      {
+        "text": "An airline grounds a plane for a suspected engine fault that turns out to be a broken dashboard indicator light.",
+        "h0": "The airplane is safe to fly.",
+        "type": "type1",
+        "explanation": "False Positive. The plane was safe, but an alarm said it wasn't."
+      },
+      {
+        "text": "An airplane takes off with a critical fuel leak because the mechanic thought the dripping was just condensation.",
+        "h0": "The airplane is safe to fly.",
+        "type": "type2",
+        "explanation": "False Negative. A critical danger was ignored."
+      },
+      {
+        "text": "A football referee calls a pass interference penalty, but the slow-motion replay shows the players barely touched.",
+        "h0": "No foul was committed.",
+        "type": "type1",
+        "explanation": "False Positive. A penalty was called on a clean play."
+      },
+      {
+        "text": "A basketball player blatantly travels to the basket, but the referee doesn't blow the whistle.",
+        "h0": "No violation occurred.",
+        "type": "type2",
+        "explanation": "False Negative. A real violation went unpunished."
+      },
+      {
+        "text": "You rush your dog to the vet thinking he ate chocolate, but he just ate a piece of a brown crayon.",
+        "h0": "The dog did not eat something toxic.",
+        "type": "type1",
+        "explanation": "False Positive. You reacted to a false alarm."
+      },
+      {
+        "text": "You assume your cat is just sleeping heavily, but she actually ingested a poisonous houseplant.",
+        "h0": "The pet is healthy.",
+        "type": "type2",
+        "explanation": "False Negative. You missed the signs of a real emergency."
+      },
+      {
+        "text": "You accuse your sibling of eating your leftovers, but you actually just forgot you ate them yourself yesterday.",
+        "h0": "Your sibling is innocent.",
+        "type": "type1",
+        "explanation": "False Positive. You falsely accused an innocent person."
+      },
+      {
+        "text": "Your roommate secretly borrows your car while you're asleep, and you never even find out.",
+        "h0": "Your roommate did not take the car.",
+        "type": "type2",
+        "explanation": "False Negative. An offense occurred, but you failed to detect it."
+      },
+      {
+        "text": "You wake up in a panic thinking you missed your alarm, but it's only 3:00 AM on a Saturday.",
+        "h0": "It is not time to wake up yet.",
+        "type": "type1",
+        "explanation": "False Positive. You woke up as if the alarm went off, but it hadn't."
+      },
+      {
+        "text": "You sleep straight through your 7:00 AM alarm and miss your final exam completely.",
+        "h0": "It is not time to wake up yet.",
+        "type": "type2",
+        "explanation": "False Negative. The event occurred (time to wake up), but you failed to react."
+      },
+      {
+        "text": "A metal detector at the beach goes crazy, but you dig up a rusty bottle cap instead of pirate gold.",
+        "h0": "There is no valuable treasure here.",
+        "type": "type1",
+        "explanation": "False Positive. The detector flagged trash as treasure."
+      },
+      {
+        "text": "A treasure hunter walks right over a buried chest of gold coins because the batteries in his metal detector died.",
+        "h0": "There is no valuable treasure here.",
+        "type": "type2",
+        "explanation": "False Negative. He missed the actual treasure."
+      },
+      {
+        "text": "A clinical trial concludes a sugar pill cures migraines because the patients happened to naturally recover that day.",
+        "h0": "The pill has no clinical effect.",
+        "type": "type1",
+        "explanation": "False Positive. They attributed a natural recovery to a useless pill."
+      },
+      {
+        "text": "A pharmaceutical company trashes an effective antibiotic because the test subjects were accidentally given the wrong dosage.",
+        "h0": "The antibiotic has no clinical effect.",
+        "type": "type2",
+        "explanation": "False Negative. A real cure was hidden by a bad testing environment."
+      },
+      {
+        "text": "An MRI scan shows a 'shadow' on a lung, leading to surgery, but it was just a harmless scar from a childhood infection.",
+        "h0": "The patient does not have a dangerous tumor.",
+        "type": "type1",
+        "explanation": "False Positive. A harmless artifact was treated as a severe disease."
+      },
+      {
+        "text": "A routine blood test comes back normal, but the patient is actually in the early stages of kidney failure.",
+        "h0": "The patient is healthy.",
+        "type": "type2",
+        "explanation": "False Negative. The test failed to detect the underlying illness."
+      },
+      {
+        "text": "A thermometer reads 104°F (40°C), but it was just sitting directly under a hot desk lamp.",
+        "h0": "The ambient temperature is normal.",
+        "type": "type1",
+        "explanation": "False Positive. The reading showed a severe fever/heat spike that wasn't real."
+      },
+      {
+        "text": "A parent feels their child's forehead and thinks they are fine, but the child actually has a 102°F fever.",
+        "h0": "The child does not have a fever.",
+        "type": "type2",
+        "explanation": "False Negative. The parent failed to detect the actual fever."
+      },
+      {
+        "text": "Your phone's spam blocker sends an urgent call from your doctor straight to voicemail.",
+        "h0": "The incoming call is legitimate.",
+        "type": "type1",
+        "explanation": "False Positive. The filter rejected a highly important, valid call."
+      },
+      {
+        "text": "A glaringly obvious phishing text with a malicious link lands right in your main SMS inbox.",
+        "h0": "The incoming message is safe.",
+        "type": "type2",
+        "explanation": "False Negative. The spam filter failed to catch the threat."
+      },
         // MEDICINE
         { text: "A healthy patient is diagnosed with a tumor.", h0: "The patient is healthy.", type: "type1", explanation: "False Positive. The test rejected the true null hypothesis (healthy) and falsely detected an illness." },
         { text: "A patient with a progressing disease is told their test results are perfectly clear.", h0: "The patient is healthy.", type: "type2", explanation: "False Negative. The test failed to reject the null hypothesis (healthy) when the patient was actually sick." },
@@ -266,6 +633,9 @@
     let score = 0;
     let highScore = localStorage.getItem('sortingHatHighScore') || 0;
     
+    // Array to track match history for the end-game review
+    let gameHistory = [];
+    
     let baseTimeLimit = 15.0; 
     let timeLeft = 15.0;
     let timerInterval;
@@ -315,7 +685,6 @@
         showStartScreen();
     }
 
-    // --- NEW: Forfeit Game Function ---
     function forfeitGame() {
         clearInterval(timerInterval);
         document.getElementById('feedback').style.display = 'none';
@@ -324,7 +693,6 @@
             detachDragEvents();
         }
         
-        // Push straight to the end screen to calculate current score/rank
         endGame();
     }
 
@@ -337,6 +705,8 @@
         deck = shuffle([...allScenarios]).slice(0, 10);
         currentCardIndex = 0;
         score = 0;
+        gameHistory = []; // Reset the match history tracker
+        
         scoreEl.innerText = score;
         highScoreEl.innerText = highScore;
         
@@ -382,6 +752,26 @@
                 timerEl.innerText = timeLeft.toFixed(1);
             }
         }, 100);
+    }
+
+    function toggleTimeAdjustment() {
+        const container = document.getElementById('feedback-time-container');
+        if (container.style.display === 'none') {
+            container.style.display = 'block';
+            document.getElementById('feedback-time-slider').value = baseTimeLimit;
+            document.getElementById('feedback-time-val').innerText = baseTimeLimit;
+        } else {
+            container.style.display = 'none';
+        }
+    }
+
+    function updateMidGameTime(newVal) {
+        document.getElementById('feedback-time-val').innerText = newVal;
+        baseTimeLimit = parseFloat(newVal);
+        
+        // Sync it with the start screen slider so it persists
+        document.getElementById('time-slider').value = newVal;
+        document.getElementById('time-val').innerText = newVal;
     }
 
     // --- Physics / Dragging Logic ---
@@ -474,10 +864,22 @@
 
     // --- Game Logic ---
 
+    function formatTypeString(typeCode) {
+        return typeCode === 'type1' ? 'Type I' : 'Type II';
+    }
+
     function handleTimeOut() {
         detachDragEvents();
         const scenario = deck[currentCardIndex];
-        showFeedback(false, scenario, 0, "Time's up! You took too long to analyze the data.");
+        
+        // Log timeout in history
+        gameHistory.push({
+            text: scenario.text,
+            correct: false,
+            reason: `Ran out of time. (Answer: ${formatTypeString(scenario.type)})`
+        });
+
+        showFeedback(false, scenario, 0, 0, 0, "Time's up! You took too long to analyze the data.");
     }
 
     function processAnswer(guessedType) {
@@ -485,25 +887,41 @@
         const scenario = deck[currentCardIndex];
         const isCorrect = guessedType === scenario.type;
         
+        // Log answer in history
+        gameHistory.push({
+            text: scenario.text,
+            correct: isCorrect,
+            reason: isCorrect ? 'Correct' : `Guessed ${formatTypeString(guessedType)} (Answer: ${formatTypeString(scenario.type)})`
+        });
+
+        let basePoints = 0;
+        let timeBonus = 0;
         let pointsEarned = 0;
+
         if (isCorrect) {
+            basePoints = 100;
             const timeRatio = timeLeft / baseTimeLimit; 
-            pointsEarned = 100 + Math.floor(timeRatio * 150);
+            timeBonus = Math.floor(timeRatio * 150);
+            pointsEarned = basePoints + timeBonus;
             score += pointsEarned;
             scoreEl.innerText = score;
         }
 
         setTimeout(() => {
-            showFeedback(isCorrect, scenario, pointsEarned);
+            showFeedback(isCorrect, scenario, pointsEarned, basePoints, timeBonus);
         }, 300);
     }
 
-    function showFeedback(isCorrect, scenario, points, customTitle = null) {
+    function showFeedback(isCorrect, scenario, totalPoints, basePoints = 0, timeBonus = 0, customTitle = null) {
         const overlay = document.getElementById('feedback');
         const title = document.getElementById('feedback-title');
         const h0 = document.getElementById('feedback-h0');
         const explanation = document.getElementById('feedback-explanation');
-        const pointsEl = document.getElementById('feedback-points');
+        
+        const pointsTotalEl = document.getElementById('pts-total');
+        const pointsBreakdownEl = document.getElementById('pts-breakdown');
+
+        document.getElementById('feedback-time-container').style.display = 'none';
 
         if (customTitle) {
             title.innerText = "⏳ Time's Up!";
@@ -519,12 +937,15 @@
         h0.innerText = scenario.h0;
         explanation.innerText = scenario.explanation;
         
-        if (points > 0) {
-            pointsEl.innerText = `+${points} pts`;
-            pointsEl.style.color = "#ffdd59";
+        if (totalPoints > 0) {
+            pointsTotalEl.innerText = `+${totalPoints} pts`;
+            pointsTotalEl.style.color = "#ffdd59";
+            pointsBreakdownEl.innerText = `(Base: ${basePoints} | Speed Bonus: ${timeBonus})`;
+            pointsBreakdownEl.style.display = "block";
         } else {
-            pointsEl.innerText = "+0 pts";
-            pointsEl.style.color = "#808e9b";
+            pointsTotalEl.innerText = "+0 pts";
+            pointsTotalEl.style.color = "#808e9b";
+            pointsBreakdownEl.style.display = "none";
         }
 
         overlay.style.display = 'flex';
@@ -545,19 +966,17 @@
     function endGame() {
         const overlay = document.getElementById('end-screen');
         const rankEl = document.getElementById('rank-text');
+        const reviewContainer = document.getElementById('review-container');
         
         document.getElementById('final-score').innerText = score;
 
-        // Handle High Score
         if (score > highScore) {
             highScore = score;
             localStorage.setItem('sortingHatHighScore', highScore);
             document.getElementById('high-score-notice').style.display = 'block';
         }
 
-        // Rank logic (Max score is 2500, but scaling down slightly for early forfeits)
-        // We calculate max possible score for however many rounds they actually played
-        const playedRounds = currentCardIndex === 0 ? 1 : currentCardIndex + 1; // avoid divide by zero if forfeit instantly
+        const playedRounds = currentCardIndex === 0 ? 1 : currentCardIndex + 1; 
         const maxPossibleScore = playedRounds * 250;
         const percent = score / maxPossibleScore;
 
@@ -566,10 +985,29 @@
         else if (percent > 0.5) rankEl.innerText = "🔬 Capable Researcher";
         else rankEl.innerText = "📉 Needs More Data";
 
+        // Build the Match History Review List
+        reviewContainer.innerHTML = ''; // Clear previous history
+        
+        if (gameHistory.length > 0) {
+            gameHistory.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'review-item';
+                div.innerHTML = `
+                    <div class="review-text"><strong>${index + 1}.</strong> ${item.text}</div>
+                    <div class="review-status ${item.correct ? 'correct' : 'incorrect'}">
+                        ${item.correct ? '✅ Correct' : '❌ ' + item.reason}
+                    </div>
+                `;
+                reviewContainer.appendChild(div);
+            });
+            reviewContainer.style.display = 'block';
+        } else {
+            reviewContainer.style.display = 'none';
+        }
+
         overlay.style.display = 'flex';
     }
 
-    // Initialize the app by showing the start screen
     showStartScreen();
 
 </script>
