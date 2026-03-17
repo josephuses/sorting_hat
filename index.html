@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Type I & Type II Sorting Hat</title>
+    
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background: #1e272e; color: #d2dae2; 
+            display: flex; flex-direction: column; align-items: center; 
+            padding: 20px; margin: 0; min-height: 100vh; overflow: hidden;
+        }
+        
+        h1 { margin: 0 0 5px 0; color: #ffdd59; text-align: center; }
+        p.subtitle { color: #808e9b; margin-top: 0; margin-bottom: 20px; text-align: center; max-width: 600px; }
+
+        /* Game Header (Score, High Score & Timer) */
+        .game-header {
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;
+            width: 100%; max-width: 450px; margin-bottom: 20px; gap: 10px;
+            background: #2c3e50; padding: 15px 20px; border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .score-box, .timer-box { font-size: 1.1rem; font-weight: bold; }
+        .score-box span { color: #0fb9b1; font-size: 1.4rem; }
+        .timer-box span { color: #ffdd59; font-size: 1.4rem; font-family: monospace; }
+        
+        .round-tracker { 
+            width: 100%; font-size: 0.9rem; color: #808e9b; margin-top: 5px; 
+            border-top: 1px solid #485460; padding-top: 10px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .header-buttons { display: flex; gap: 8px; }
+
+        .btn-reset, .btn-forfeit {
+            border: none; padding: 6px 12px; border-radius: 6px; 
+            cursor: pointer; font-size: 0.85rem; font-weight: bold;
+            transition: background 0.2s, transform 0.1s;
+        }
+        
+        .btn-reset { background: #e74c3c; color: white; }
+        .btn-reset:hover { background: #c0392b; }
+        .btn-reset:active { transform: scale(0.95); }
+
+        .btn-forfeit { background: #f39c12; color: #1e272e; }
+        .btn-forfeit:hover { background: #e67e22; }
+        .btn-forfeit:active { transform: scale(0.95); }
+
+        /* Card Container */
+        .card-container {
+            position: relative; width: 100%; max-width: 400px; height: 350px;
+            perspective: 1000px; display: flex; justify-content: center; align-items: center;
+        }
+
+        /* Individual Card */
+        .swipe-card {
+            position: absolute; width: 100%; height: 100%;
+            background: #34495e; border-radius: 16px; 
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            padding: 30px; text-align: center; cursor: grab; user-select: none;
+            transform-origin: 50% 100%; border: 2px solid #485460;
+            will-change: transform; z-index: 100;
+        }
+        .swipe-card:active { cursor: grabbing; }
+
+        .scenario-text { font-size: 1.25rem; line-height: 1.5; color: #d2dae2; margin-bottom: 10px; pointer-events: none;}
+        
+        .card-badge {
+            position: absolute; top: 20px; padding: 5px 15px; border-radius: 20px;
+            font-size: 1.5rem; font-weight: bold; border: 3px solid; opacity: 0;
+            transition: opacity 0.1s; pointer-events: none; text-transform: uppercase;
+        }
+        .badge-type1 { left: 20px; color: #ff7979; border-color: #ff7979; transform: rotate(-15deg); }
+        .badge-type2 { right: 20px; color: #7ed6df; border-color: #7ed6df; transform: rotate(15deg); }
+
+        /* Button Controls */
+        .controls {
+            display: flex; justify-content: space-between; width: 100%; max-width: 450px;
+            margin-top: 20px; gap: 15px;
+        }
+
+        .btn-swipe {
+            flex: 1; padding: 15px; border: none; border-radius: 12px;
+            font-size: 1.1rem; font-weight: bold; cursor: pointer; color: white;
+            transition: transform 0.1s;
+        }
+        .btn-swipe:active { transform: scale(0.95); }
+        .btn-left { background: #ff7979; box-shadow: 0 5px 0 #eb4d4b; }
+        .btn-right { background: #7ed6df; box-shadow: 0 5px 0 #22a6b3; color: #1e272e; }
+
+        /* Overlays */
+        .overlay-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(30, 39, 46, 0.95); display: flex;
+            flex-direction: column; justify-content: center; align-items: center;
+            z-index: 200; padding: 20px; text-align: center;
+        }
+
+        .feedback-box {
+            background: #2c3e50; padding: 30px; border-radius: 16px; max-width: 500px; width: 100%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .feedback-title { font-size: 2.5rem; margin: 0 0 10px 0; }
+        .feedback-text { font-size: 1.1rem; line-height: 1.5; color: #bdc3c7; margin-bottom: 20px; }
+        .feedback-points { font-size: 1.5rem; font-weight: bold; color: #ffdd59; margin-bottom: 20px; }
+
+        .btn-next { background: #05c46b; box-shadow: 0 4px 0 #009432; color: white; font-size: 1.2rem; padding: 12px 30px; border: none; border-radius: 8px; cursor: pointer; width: 100%; }
+        .btn-next:hover { background: #10ac84; }
+
+        /* Start Screen specific */
+        .slider-container { margin: 25px 0; text-align: left; }
+        .slider-container label { display: block; margin-bottom: 10px; font-weight: bold; color: #d2dae2; }
+        input[type=range] { width: 100%; cursor: pointer; }
+        .val-display { font-family: monospace; font-size: 1.2rem; color: #ffdd59; font-weight: bold; }
+
+        /* Null Hypothesis Hint */
+        .hint-box {
+            background: rgba(0,0,0,0.2); border-left: 4px solid #f39c12;
+            padding: 10px; margin-bottom: 15px; font-size: 0.9rem; text-align: left; line-height: 1.4;
+        }
+
+        /* End Screen specific */
+        .final-score { font-size: 4rem; color: #0fb9b1; margin: 10px 0; }
+        .rank-text { font-size: 1.5rem; color: #ffdd59; margin-bottom: 10px; }
+        .high-score-notice { color: #f39c12; font-weight: bold; margin-bottom: 20px; display: none; animation: pulse 1s infinite alternate;}
+
+        @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.05); } }
+
+    </style>
+</head>
+<body>
+
+    <h1>Type I & Type II Swiper</h1>
+    <p class="subtitle">Swipe Left for Type I (False Positive). Swipe Right for Type II (False Negative).</p>
+
+    <div class="game-header">
+        <div class="score-box">Score: <span id="score">0</span></div>
+        <div class="timer-box">⏰ <span id="timer">0.0</span>s</div>
+        <div class="round-tracker">
+            <span>Round: <span id="round-current" style="color:#d2dae2; font-weight:bold;">1</span> / 10 &nbsp;|&nbsp; High Score: <span id="high-score" style="color:#f39c12;">0</span></span>
+            <div class="header-buttons">
+                <button class="btn-forfeit" onclick="forfeitGame()">🛑 End Game</button>
+                <button class="btn-reset" onclick="resetGame()">🔄 Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-container" id="card-stack">
+        </div>
+
+    <div class="controls">
+        <button class="btn-swipe btn-left" onclick="handleButtonSwipe('type1')">👈 Type I<br><small>(False Positive)</small></button>
+        <button class="btn-swipe btn-right" onclick="handleButtonSwipe('type2')">Type II 👉<br><small>(False Negative)</small></button>
+    </div>
+
+    <div class="overlay-screen" id="start-screen">
+        <div class="feedback-box">
+            <h2 class="feedback-title" style="color: #ffdd59;">Ready to Research?</h2>
+            <p class="feedback-text">Test your ability to quickly identify Type I and Type II errors across medicine, law, tech, and everyday life.</p>
+            
+            <div class="slider-container">
+                <label for="time-slider">Set Time Limit per Card: <span class="val-display" id="time-val">15</span> seconds</label>
+                <input type="range" id="time-slider" min="5" max="60" step="1" value="15" oninput="document.getElementById('time-val').innerText = this.value">
+            </div>
+
+            <button class="btn-next" onclick="initGame()">Start Game</button>
+        </div>
+    </div>
+
+    <div class="overlay-screen" id="feedback" style="display: none;">
+        <div class="feedback-box">
+            <h2 class="feedback-title" id="feedback-title">Correct!</h2>
+            <div class="hint-box">
+                <strong>Null Hypothesis (H0):</strong> <span id="feedback-h0"></span>
+            </div>
+            <p class="feedback-text" id="feedback-explanation">Explanation goes here.</p>
+            <div class="feedback-points" id="feedback-points">+150 pts</div>
+            <button class="btn-next" onclick="nextCard()">Next Scenario ➔</button>
+        </div>
+    </div>
+
+    <div class="overlay-screen" id="end-screen" style="display: none;">
+        <div class="feedback-box">
+            <h2>Research Complete!</h2>
+            <div class="final-score" id="final-score">0</div>
+            <div class="high-score-notice" id="high-score-notice">🌟 NEW HIGH SCORE! 🌟</div>
+            <div class="rank-text" id="rank-text">Novice Analyst</div>
+            <button class="btn-next" onclick="showStartScreen()">Play Again</button>
+        </div>
+    </div>
+
+<script>
+    const allScenarios = [
+        // MEDICINE
+        { text: "A healthy patient is diagnosed with a tumor.", h0: "The patient is healthy.", type: "type1", explanation: "False Positive. The test rejected the true null hypothesis (healthy) and falsely detected an illness." },
+        { text: "A patient with a progressing disease is told their test results are perfectly clear.", h0: "The patient is healthy.", type: "type2", explanation: "False Negative. The test failed to reject the null hypothesis (healthy) when the patient was actually sick." },
+        { text: "A pregnancy test shows two lines for a man.", h0: "The patient is not pregnant.", type: "type1", explanation: "False Positive. It rejected the (very true) null hypothesis that the man is not pregnant." },
+        { text: "A woman in her third trimester gets a negative pregnancy test.", h0: "The patient is not pregnant.", type: "type2", explanation: "False Negative. The test failed to detect a very real pregnancy." },
+        { text: "A rapid strep test comes back negative, but the child actually has strep throat.", h0: "The child does not have strep.", type: "type2", explanation: "False Negative. It missed the infection." },
+        { text: "A biopsy confirms cancer, but it was just benign tissue.", h0: "The tissue is benign.", type: "type1", explanation: "False Positive. The pathologist mistakenly rejected the null hypothesis." },
+        
+        // LAW & JUSTICE
+        { text: "An innocent person is sent to prison.", h0: "The defendant is innocent.", type: "type1", explanation: "False Positive. The jury rejected the presumption of innocence when it was actually true." },
+        { text: "A serial killer is acquitted due to a technicality and walks free.", h0: "The defendant is innocent.", type: "type2", explanation: "False Negative. The jury failed to reject the presumption of innocence despite actual guilt." },
+        { text: "A lie detector test says a truthful witness is lying.", h0: "The witness is telling the truth.", type: "type1", explanation: "False Positive. The machine flagged deception where none existed." },
+        { text: "A suspect easily beats a lie detector test despite committing the crime.", h0: "The suspect is telling the truth.", type: "type2", explanation: "False Negative. The machine failed to detect the lie." },
+        { text: "A copyright bot takes down a video that was entirely fair use.", h0: "The video does not infringe copyright.", type: "type1", explanation: "False Positive. The algorithm rejected a true null hypothesis (fair use)." },
+        { text: "A user successfully uploads a fully pirated movie to YouTube without detection.", h0: "The video does not infringe copyright.", type: "type2", explanation: "False Negative. The algorithm missed the violation." },
+
+        // TECH & SOFTWARE
+        { text: "Your spam filter sends an email from your boss to the junk folder.", h0: "The email is legitimate.", type: "type1", explanation: "False Positive. The filter rejected a normal email." },
+        { text: "A phishing scam email asking for your password lands in your main inbox.", h0: "The email is legitimate.", type: "type2", explanation: "False Negative. The filter accepted a dangerous email as normal." },
+        { text: "An antivirus software deletes a critical Windows system file, claiming it's a virus.", h0: "The file is safe.", type: "type1", explanation: "False Positive. It falsely flagged a safe, necessary file." },
+        { text: "A Trojan horse virus bypasses your firewall completely unnoticed.", h0: "Incoming traffic is safe.", type: "type2", explanation: "False Negative. The firewall failed to detect the threat." },
+        { text: "Autocorrect changes your correctly spelled surname into a completely different word.", h0: "The word is spelled correctly.", type: "type1", explanation: "False Positive. The system flagged a correct spelling as an error." },
+        { text: "Spellcheck fails to notice you used 'their' instead of 'there'.", h0: "The grammar is correct.", type: "type2", explanation: "False Negative. It missed the grammatical error." },
+        { text: "Face ID refuses to unlock your phone even though you are looking right at it.", h0: "The person holding the phone is the owner.", type: "type1", explanation: "False Positive (rejection). It wrongly rejected the true owner." },
+        { text: "Your identical twin unlocks your phone using Face ID.", h0: "The person holding the phone is the owner.", type: "type2", explanation: "False Negative (acceptance). It accepted an unauthorized user." },
+
+        // ENGINEERING & SECURITY
+        { text: "A fire alarm goes off because someone burned toast.", h0: "There is no dangerous fire.", type: "type1", explanation: "False Positive. It reacted to a non-threat as if it were an emergency." },
+        { text: "A house burns down because the smoke detector batteries were dead.", h0: "There is no dangerous fire.", type: "type2", explanation: "False Negative. The system failed to alert during an actual fire." },
+        { text: "The TSA confiscates a regular bottle of water as a dangerous chemical.", h0: "The passenger's luggage is safe.", type: "type1", explanation: "False Positive. A safe item was flagged as a threat." },
+        { text: "A passenger successfully smuggles a pocket knife onto a plane.", h0: "The passenger's luggage is safe.", type: "type2", explanation: "False Negative. Security failed to detect the weapon." },
+        { text: "A military radar identifies a flock of birds as incoming enemy missiles.", h0: "The airspace is clear.", type: "type1", explanation: "False Positive. It falsely alerted on a safe situation." },
+        { text: "A stealth bomber flies through enemy airspace completely undetected.", h0: "The airspace is clear.", type: "type2", explanation: "False Negative. The radar failed to see the threat." },
+        { text: "A self-driving car slams on the brakes for a shadow on the road.", h0: "The road is clear.", type: "type1", explanation: "False Positive. It detected an obstacle that wasn't there." },
+        { text: "A self-driving car fails to stop for a pedestrian crossing the street.", h0: "The road is clear.", type: "type2", explanation: "False Negative. It failed to detect a real obstacle." },
+
+        // FINANCE & BUSINESS
+        { text: "Your bank freezes your credit card while you are buying groceries in your hometown.", h0: "The transaction is legitimate.", type: "type1", explanation: "False Positive. The bank flagged a normal purchase as fraud." },
+        { text: "A hacker buys $5,000 worth of gift cards using your stolen credit card, and the bank approves it.", h0: "The transaction is legitimate.", type: "type2", explanation: "False Negative. The bank missed the actual fraud." },
+        { text: "Quality control throws away a perfectly good batch of smartphones.", h0: "The product meets quality standards.", type: "type1", explanation: "False Positive. A good batch was falsely rejected as defective." },
+        { text: "A toy company accidentally ships out thousands of toys coated in lead paint.", h0: "The product meets quality standards.", type: "type2", explanation: "False Negative. Defective products passed inspection." },
+        { text: "An automated trading bot sells all stocks in a panic due to a fake news headline.", h0: "The market is stable.", type: "type1", explanation: "False Positive. The bot reacted to a non-existent market crash." },
+
+        // EVERYDAY LIFE & SCIENCE
+        { text: "You throw away a carton of milk thinking it's expired, but it was perfectly fresh.", h0: "The milk is safe to drink.", type: "type1", explanation: "False Positive. You rejected good food." },
+        { text: "You eat leftover chicken that smells fine, but you get terrible food poisoning.", h0: "The food is safe to eat.", type: "type2", explanation: "False Negative. You failed to detect the bad food." },
+        { text: "A weather app issues a severe tornado warning, but it's just a sunny day.", h0: "The weather is normal.", type: "type1", explanation: "False Positive. An alert for an event that didn't happen." },
+        { text: "A massive hurricane makes landfall with zero warning from meteorologists.", h0: "The weather is normal.", type: "type2", explanation: "False Negative. They failed to predict the event." },
+        { text: "A researcher claims a new drug cures baldness, but subsequent studies prove it does absolutely nothing.", h0: "The drug has no effect.", type: "type1", explanation: "False Positive. The researcher falsely rejected the null hypothesis." },
+        { text: "A researcher abandons testing on a drug, not realizing it was the cure for a rare disease.", h0: "The drug has no effect.", type: "type2", explanation: "False Negative. They failed to discover a real effect." },
+        { text: "A dog barks aggressively at a plastic bag blowing in the wind.", h0: "There is no intruder.", type: "type1", explanation: "False Positive. The dog detected a threat where there was none." },
+        { text: "A guard dog sleeps completely through a burglary.", h0: "There is no intruder.", type: "type2", explanation: "False Negative. The dog failed to detect the actual threat." },
+        { text: "You think your friend is mad at you because they left you on 'read', but they were just busy driving.", h0: "Your friend is not angry.", type: "type1", explanation: "False Positive. You falsely assumed a problem existed." },
+        { text: "You think your relationship is going great, but your partner breaks up with you the next day.", h0: "The relationship is stable.", type: "type2", explanation: "False Negative. You missed the signs of trouble." },
+        { text: "A metal detector at a concert beeps because of the rivets on your jeans.", h0: "The person has no weapons.", type: "type1", explanation: "False Positive. It flagged safe metal." },
+        { text: "A seismologist issues an earthquake evacuation order, but the ground remains still.", h0: "There is no earthquake.", type: "type1", explanation: "False Positive. A false alarm." },
+        { text: "An earthquake destroys a city without the early warning system ever activating.", h0: "There is no earthquake.", type: "type2", explanation: "False Negative. The system failed to warn." },
+        { text: "Your car's 'Check Engine' light turns on because the gas cap was slightly loose.", h0: "The engine is functioning properly.", type: "type1", explanation: "False Positive. The sensor flagged a non-issue as an engine problem." },
+        { text: "Your engine overheats and breaks down, but the 'Check Engine' light never turned on.", h0: "The engine is functioning properly.", type: "type2", explanation: "False Negative. The sensor failed to warn you of imminent failure." },
+        { text: "A plagiarism checker claims an original essay you wrote was 90% copied from Wikipedia.", h0: "The work is original.", type: "type1", explanation: "False Positive. It incorrectly flagged original work as stolen." },
+        { text: "A student copy-pastes an entire Wikipedia article, and the professor's software says it's 100% original.", h0: "The work is original.", type: "type2", explanation: "False Negative. The software missed blatant plagiarism." }
+    ];
+
+    let deck = [];
+    let currentCardIndex = 0;
+    let score = 0;
+    let highScore = localStorage.getItem('sortingHatHighScore') || 0;
+    
+    let baseTimeLimit = 15.0; 
+    let timeLeft = 15.0;
+    let timerInterval;
+    
+    let isDragging = false;
+    let startX = 0;
+    let currentX = 0;
+    let currentCardElement = null;
+
+    const stackEl = document.getElementById('card-stack');
+    const timerEl = document.getElementById('timer');
+    const scoreEl = document.getElementById('score');
+    const highScoreEl = document.getElementById('high-score');
+    const roundEl = document.getElementById('round-current');
+
+    // Display High Score on load
+    highScoreEl.innerText = highScore;
+
+    function shuffle(array) {
+        let currentIndex = array.length, randomIndex;
+        while (currentIndex !== 0) {
+            randomIndex = Math.floor(Math.random() * currentIndex);
+            currentIndex--;
+            [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+        }
+        return array;
+    }
+
+    function showStartScreen() {
+        document.getElementById('end-screen').style.display = 'none';
+        document.getElementById('start-screen').style.display = 'flex';
+        // Reset visual elements before next game
+        scoreEl.innerText = "0";
+        roundEl.innerText = "1";
+        timerEl.innerText = "0.0";
+        stackEl.innerHTML = '';
+    }
+
+    function resetGame() {
+        clearInterval(timerInterval);
+        document.getElementById('feedback').style.display = 'none';
+        document.getElementById('end-screen').style.display = 'none';
+        
+        if (currentCardElement) {
+            detachDragEvents();
+        }
+        showStartScreen();
+    }
+
+    // --- NEW: Forfeit Game Function ---
+    function forfeitGame() {
+        clearInterval(timerInterval);
+        document.getElementById('feedback').style.display = 'none';
+        
+        if (currentCardElement) {
+            detachDragEvents();
+        }
+        
+        // Push straight to the end screen to calculate current score/rank
+        endGame();
+    }
+
+    function initGame() {
+        baseTimeLimit = parseFloat(document.getElementById('time-slider').value);
+        
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('high-score-notice').style.display = 'none';
+
+        deck = shuffle([...allScenarios]).slice(0, 10);
+        currentCardIndex = 0;
+        score = 0;
+        scoreEl.innerText = score;
+        highScoreEl.innerText = highScore;
+        
+        renderCurrentCard();
+        startTimer();
+    }
+
+    function renderCurrentCard() {
+        stackEl.innerHTML = '';
+        roundEl.innerText = currentCardIndex + 1;
+        
+        const scenario = deck[currentCardIndex];
+        const card = document.createElement('div');
+        card.classList.add('swipe-card');
+        card.innerHTML = `
+            <div class="card-badge badge-type1" id="badge-left">Type I</div>
+            <div class="card-badge badge-type2" id="badge-right">Type II</div>
+            <div class="scenario-text">"${scenario.text}"</div>
+        `;
+        
+        stackEl.appendChild(card);
+        currentCardElement = card;
+        
+        setTimeout(() => {
+            currentCardElement.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+            attachDragEvents(card);
+        }, 10);
+    }
+
+    function startTimer() {
+        timeLeft = baseTimeLimit;
+        timerEl.innerText = timeLeft.toFixed(1);
+        clearInterval(timerInterval);
+        
+        timerInterval = setInterval(() => {
+            timeLeft -= 0.1;
+            if (timeLeft <= 0) {
+                timeLeft = 0;
+                timerEl.innerText = "0.0";
+                clearInterval(timerInterval);
+                handleTimeOut();
+            } else {
+                timerEl.innerText = timeLeft.toFixed(1);
+            }
+        }, 100);
+    }
+
+    // --- Physics / Dragging Logic ---
+
+    function attachDragEvents(card) {
+        card.addEventListener('mousedown', dragStart);
+        card.addEventListener('touchstart', dragStart, {passive: true});
+        
+        document.addEventListener('mousemove', dragMove);
+        document.addEventListener('touchmove', dragMove, {passive: false});
+        
+        document.addEventListener('mouseup', dragEnd);
+        document.addEventListener('touchend', dragEnd);
+    }
+
+    function detachDragEvents() {
+        document.removeEventListener('mousemove', dragMove);
+        document.removeEventListener('touchmove', dragMove);
+        document.removeEventListener('mouseup', dragEnd);
+        document.removeEventListener('touchend', dragEnd);
+    }
+
+    function dragStart(e) {
+        if (e.target.tagName === 'BUTTON') return;
+        isDragging = true;
+        startX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+        currentCardElement.style.transition = 'none';
+    }
+
+    function dragMove(e) {
+        if (!isDragging) return;
+        const x = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+        currentX = x - startX;
+        
+        const rotate = currentX * 0.05;
+        currentCardElement.style.transform = `translateX(${currentX}px) rotate(${rotate}deg)`;
+
+        const badgeLeft = document.getElementById('badge-left');
+        const badgeRight = document.getElementById('badge-right');
+        
+        if (currentX < 0) {
+            badgeLeft.style.opacity = Math.min(Math.abs(currentX) / 100, 1);
+            badgeRight.style.opacity = 0;
+        } else {
+            badgeRight.style.opacity = Math.min(Math.abs(currentX) / 100, 1);
+            badgeLeft.style.opacity = 0;
+        }
+    }
+
+    function dragEnd(e) {
+        if (!isDragging) return;
+        isDragging = false;
+        
+        currentCardElement.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+        
+        const threshold = 100;
+        if (currentX < -threshold) {
+            animateSwipeOut(-1);
+            processAnswer('type1');
+        } else if (currentX > threshold) {
+            animateSwipeOut(1);
+            processAnswer('type2');
+        } else {
+            currentCardElement.style.transform = `translateX(0px) rotate(0deg)`;
+            document.getElementById('badge-left').style.opacity = 0;
+            document.getElementById('badge-right').style.opacity = 0;
+        }
+        currentX = 0;
+    }
+
+    function handleButtonSwipe(direction) {
+        if(!currentCardElement) return;
+        currentCardElement.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+        if (direction === 'type1') {
+            animateSwipeOut(-1);
+            processAnswer('type1');
+        } else {
+            animateSwipeOut(1);
+            processAnswer('type2');
+        }
+    }
+
+    function animateSwipeOut(direction) {
+        detachDragEvents();
+        const throwX = direction * window.innerWidth;
+        const throwRotate = direction * 45;
+        currentCardElement.style.transform = `translateX(${throwX}px) rotate(${throwRotate}deg)`;
+        currentCardElement.style.opacity = 0;
+    }
+
+    // --- Game Logic ---
+
+    function handleTimeOut() {
+        detachDragEvents();
+        const scenario = deck[currentCardIndex];
+        showFeedback(false, scenario, 0, "Time's up! You took too long to analyze the data.");
+    }
+
+    function processAnswer(guessedType) {
+        clearInterval(timerInterval);
+        const scenario = deck[currentCardIndex];
+        const isCorrect = guessedType === scenario.type;
+        
+        let pointsEarned = 0;
+        if (isCorrect) {
+            const timeRatio = timeLeft / baseTimeLimit; 
+            pointsEarned = 100 + Math.floor(timeRatio * 150);
+            score += pointsEarned;
+            scoreEl.innerText = score;
+        }
+
+        setTimeout(() => {
+            showFeedback(isCorrect, scenario, pointsEarned);
+        }, 300);
+    }
+
+    function showFeedback(isCorrect, scenario, points, customTitle = null) {
+        const overlay = document.getElementById('feedback');
+        const title = document.getElementById('feedback-title');
+        const h0 = document.getElementById('feedback-h0');
+        const explanation = document.getElementById('feedback-explanation');
+        const pointsEl = document.getElementById('feedback-points');
+
+        if (customTitle) {
+            title.innerText = "⏳ Time's Up!";
+            title.style.color = "#f39c12";
+        } else if (isCorrect) {
+            title.innerText = "✅ Correct!";
+            title.style.color = "#05c46b";
+        } else {
+            title.innerText = "❌ Incorrect!";
+            title.style.color = "#ff7979";
+        }
+
+        h0.innerText = scenario.h0;
+        explanation.innerText = scenario.explanation;
+        
+        if (points > 0) {
+            pointsEl.innerText = `+${points} pts`;
+            pointsEl.style.color = "#ffdd59";
+        } else {
+            pointsEl.innerText = "+0 pts";
+            pointsEl.style.color = "#808e9b";
+        }
+
+        overlay.style.display = 'flex';
+    }
+
+    function nextCard() {
+        document.getElementById('feedback').style.display = 'none';
+        currentCardIndex++;
+        
+        if (currentCardIndex >= deck.length) {
+            endGame();
+        } else {
+            renderCurrentCard();
+            startTimer();
+        }
+    }
+
+    function endGame() {
+        const overlay = document.getElementById('end-screen');
+        const rankEl = document.getElementById('rank-text');
+        
+        document.getElementById('final-score').innerText = score;
+
+        // Handle High Score
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('sortingHatHighScore', highScore);
+            document.getElementById('high-score-notice').style.display = 'block';
+        }
+
+        // Rank logic (Max score is 2500, but scaling down slightly for early forfeits)
+        // We calculate max possible score for however many rounds they actually played
+        const playedRounds = currentCardIndex === 0 ? 1 : currentCardIndex + 1; // avoid divide by zero if forfeit instantly
+        const maxPossibleScore = playedRounds * 250;
+        const percent = score / maxPossibleScore;
+
+        if (score === 0) rankEl.innerText = "📉 No Data Collected";
+        else if (percent > 0.8) rankEl.innerText = "🏆 Peer-Reviewed Legend";
+        else if (percent > 0.5) rankEl.innerText = "🔬 Capable Researcher";
+        else rankEl.innerText = "📉 Needs More Data";
+
+        overlay.style.display = 'flex';
+    }
+
+    // Initialize the app by showing the start screen
+    showStartScreen();
+
+</script>
+</body>
+</html>
